@@ -1,122 +1,353 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import Stepper from "./components/Stepper";
+import RoomSelection from "./components/RoomSelection";
+import ScheduleSelection from "./components/ScheduleSelection";
+import BookingDetails from "./components/BookingDetails";
+import BookingReview from "./components/BookingReview";
+import BookingSuccess from "./components/BookingSuccess";
+
+import { useEffect, useState } from "react";
+import {
+  getRooms,
+  getSlots,
+  getBookingsBySlot,
+  createBooking
+} from "./services/api";
+import {
+  getTodayLocal,
+  validateBookingDetails
+} from "./utils/booking";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [rooms, setRooms] = useState([]);
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [selectedDate, setSelectedDate] = useState("");
+  const [slots, setSlots] = useState([]);
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState("");
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    participants: ""
+  });
+  
+  const [touched, setTouched] = useState({});
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [bookingResult, setBookingResult] = useState(null);
+
+  const selectedRoom = rooms.find(
+    (room) => room.id === selectedRoomId
+  );
+
+  const formErrors = validateBookingDetails(
+    formData,
+    selectedRoom?.capacity
+  );
+
+  const isFormValid =
+    Boolean(selectedRoom) &&
+    Object.keys(formErrors).length === 0;
+
+  // Fetch Rooms
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadRooms() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await getRooms(controller.signal);
+        setRooms(data);
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          setError(err.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadRooms();
+
+    return () => controller.abort();
+  }, []);
+
+  // Fetch Slots
+  useEffect(() => {
+    if (step !== 2 || selectedRoomId === null) return;
+
+    const controller = new AbortController();
+
+    async function loadSlots() {
+      setSlotsLoading(true);
+      setSlotsError("");
+      setSlots([]);
+
+      try {
+        const data = await getSlots(
+          selectedRoomId,
+          controller.signal
+        );
+
+        setSlots(data);
+        setSelectedSlotId((previousId) =>
+          data.some(
+            (slot) => slot.id === previousId && slot.isAvailable
+          )
+            ? previousId
+            : null
+        );
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          setSlotsError(err.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSlotsLoading(false);
+        }
+      }
+    }
+
+    loadSlots();
+
+    return () => controller.abort();
+  }, [step, selectedRoomId]);
+
+  function handleFieldChange(event) {
+    const { name, value } = event.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  }
+
+  function handleFieldBlur(event) {
+    const { name } = event.target;
+
+    setTouched((prev) => ({
+      ...prev,
+      [name]: true
+    }));
+  }
+
+  function handleDetailsSubmit(event) {
+    event.preventDefault();
+
+    if (!isFormValid) {
+      setTouched({
+        name: true,
+        email: true,
+        phone: true,
+        participants: true
+      });
+      return;
+    }
+
+    setStep(4);
+  }
+  
+  async function handleConfirmBooking() {
+    if (isSubmitting) return;
+
+    setSubmitError("");
+
+    const selectedSlot = slots.find(
+      (slot) => slot.id === selectedSlotId
+    );
+
+    if (!selectedRoom) {
+      setSubmitError("Selected room not found.");
+      return;
+    }
+
+    if (!selectedSlot) {
+      setSubmitError("Selected time slot not found.");
+      return;
+    }
+
+    if (!selectedSlot.isAvailable) {
+      setSubmitError("Selected time slot is unavailable.");
+      return;
+    }
+
+    if (!selectedDate || selectedDate < getTodayLocal()) {
+      setSubmitError("Please select a valid booking date.");
+      return;
+    }
+
+    if (!isFormValid) {
+      console.log("Form errors:", formErrors);
+      setSubmitError("Please check your booking details.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Check for existing bookings
+      const existingBookings = await getBookingsBySlot(
+        selectedRoomId,
+        selectedSlotId,
+        selectedDate
+      );
+
+      if (existingBookings.length > 0) {
+        setSubmitError(
+          "This time slot is already booked for the selected date."
+        );
+        return;
+      }
+
+      // Prepare booking data
+      const bookingData = {
+        roomId: selectedRoomId,
+        slotId: selectedSlotId,
+        date: selectedDate,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.replace(/[\s-]/g, ""),
+        participants: Number(formData.participants),
+        bookingCode: `BK-${crypto.randomUUID()
+          .replaceAll("-", "")
+          .slice(0, 12)
+          .toUpperCase()}`
+      };
+
+      // Send POST request
+      const result = await createBooking(bookingData);
+
+      // Save the API response
+      if (!result.bookingCode) {
+        throw new Error("Booking response is missing a code.");
+      }
+
+      setBookingResult(result);
+      setStep(5);
+
+    } catch (err) {
+      setSubmitError(
+        err.message || "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function handleNewBooking() {
+    setStep(1);
+    setSelectedRoomId(null);
+    setSelectedDate("");
+    setSelectedSlotId(null);
+    setSlots([]);
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      participants: ""
+    });
+    setTouched({});
+    setSubmitError("");
+    setBookingResult(null);
+  }
+
+  function handleSelectRoom(roomId) {
+    if (roomId === selectedRoomId) return;
+  
+    setSelectedRoomId(roomId);
+    setSelectedSlotId(null);
+  }
+
+  function handleDateChange(date) {
+    setSelectedDate(date);
+    setSelectedSlotId(null);
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main className="container">
+      <header className="header">
+        <h1>Meeting Room Booking</h1>
+        <p>Book the perfect space for your next meeting.</p>
+      </header>
 
-      <div className="ticks"></div>
+      <Stepper currentStep={step} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {step === 1 ? (
+        <RoomSelection
+          rooms={rooms}
+          selectedRoomId={selectedRoomId}
+          loading={loading}
+          error={error}
+          onSelectRoom={handleSelectRoom}
+          onNext={() => setStep(2)}
+        />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      ) : step === 2 ? (
+        <ScheduleSelection
+          selectedDate={selectedDate}
+          slots={slots}
+          selectedSlotId={selectedSlotId}
+          slotsLoading={slotsLoading}
+          slotsError={slotsError}
+          minDate={getTodayLocal()}
+          onDateChange={handleDateChange}
+          onSelectSlot={setSelectedSlotId}
+          onBack={() => setStep(1)}
+          onNext={() => setStep(3)}
+        />
+
+      ) : step === 3 ? (
+        <BookingDetails
+          formData={formData}
+          touched={touched}
+          formErrors={formErrors}
+          maxCapacity={selectedRoom?.capacity}
+          isFormValid={isFormValid}
+          onFieldChange={handleFieldChange}
+          onFieldBlur={handleFieldBlur}
+          onSubmit={handleDetailsSubmit}
+          onBack={() => setStep(2)}
+        />
+
+      ) : step === 4 ? (
+        <BookingReview
+          selectedRoom={selectedRoom}
+          selectedDate={selectedDate}
+          selectedSlot={slots.find(
+            (slot) => slot.id === selectedSlotId
+          )}
+          formData={formData}
+          submitError={submitError}
+          isSubmitting={isSubmitting}
+          onBack={() => {
+            setSubmitError("");
+            setStep(3);
+          }}
+          onConfirm={handleConfirmBooking}
+        />
+
+      ) : (
+        <BookingSuccess
+          bookingResult={bookingResult}
+          selectedRoom={selectedRoom}
+          slots={slots}
+          onNewBooking={handleNewBooking}
+        />
+      )}
+          </main>
+  );
 }
 
-export default App
+export default App;

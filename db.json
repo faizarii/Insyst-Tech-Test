@@ -1,0 +1,154 @@
+{
+  "rooms": [
+    {
+      "id": 1,
+      "name": "Orchid Room",
+      "capacity": 4,
+      "pricePerHour": 75000,
+      "facilities": [
+        "WiFi",
+        "TV",
+        "Whiteboard"
+      ],
+      "image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800"
+    },
+    {
+      "id": 2,
+      "name": "Maple Room",
+      "capacity": 8,
+      "pricePerHour": 150000,
+      "facilities": [
+        "WiFi",
+        "Projector",
+        "Whiteboard"
+      ],
+      "image": "https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=800"
+    },
+    {
+      "id": 3,
+      "name": "Grand Conference Room",
+      "capacity": 15,
+      "pricePerHour": 250000,
+      "facilities": [
+        "WiFi",
+        "Projector",
+        "TV",
+        "Sound System"
+      ],
+      "image": "https://images.unsplash.com/photo-1497366858526-0766cadbe8fa?w=800"
+    }
+  ],
+  "slots": [
+    {
+      "id": 1,
+      "roomId": 1,
+      "time": "09:00-10:00",
+      "isAvailable": true
+    },
+    {
+      "id": 2,
+      "roomId": 1,
+      "time": "10:00-11:00",
+      "isAvailable": false
+    },
+    {
+      "id": 3,
+      "roomId": 1,
+      "time": "11:00-12:00",
+      "isAvailable": true
+    },
+    {
+      "id": 4,
+      "roomId": 2,
+      "time": "09:00-10:00",
+      "isAvailable": true
+    },
+    {
+      "id": 5,
+      "roomId": 2,
+      "time": "10:00-11:00",
+      "isAvailable": true
+    },
+    {
+      "id": 6,
+      "roomId": 2,
+      "time": "11:00-12:00",
+      "isAvailable": false
+    },
+    {
+      "id": 7,
+      "roomId": 3,
+      "time": "09:00-10:00",
+      "isAvailable": true
+    },
+    {
+      "id": 8,
+      "roomId": 3,
+      "time": "10:00-11:00",
+      "isAvailable": true
+    },
+    {
+      "id": 9,
+      "roomId": 3,
+      "time": "11:00-12:00",
+      "isAvailable": true
+    }
+  ],
+  "bookings": [
+    {
+      "roomId": 2,
+      "slotId": 5,
+      "date": "2027-11-14",
+      "name": "Faiz Ari Fadhilah",
+      "email": "faiz.arifadhilah@gmail.com",
+      "phone": "+6281266029266",
+      "participants": 7,
+      "bookingCode": "BK-4B5D915C3E06",
+      "id": 1
+    },
+    {
+      "roomId": 2,
+      "slotId": 5,
+      "date": "2027-11-15",
+      "name": "fa",
+      "email": "faiz.fadhilah@binus.ac.id",
+      "phone": "+6281266029262",
+      "participants": 7,
+      "bookingCode": "BK-0830772D41E0",
+      "id": 2
+    },
+    {
+      "roomId": 2,
+      "slotId": 5,
+      "date": "2026-11-14",
+      "name": "Faiz Ari Fadhilah",
+      "email": "faiz.fadhilah@binus.ac.id",
+      "phone": "+6281266029262",
+      "participants": 1,
+      "bookingCode": "BK-DCD3EC20113E",
+      "id": 3
+    },
+    {
+      "roomId": 3,
+      "slotId": 9,
+      "date": "2026-10-19",
+      "name": "Faiz Ari Fadhilah",
+      "email": "faiz.arifadhilah@gmail.com",
+      "phone": "+6281266029266",
+      "participants": 11,
+      "bookingCode": "BK-E65CF5DF0B44",
+      "id": 4
+    },
+    {
+      "roomId": 2,
+      "slotId": 5,
+      "date": "2026-11-20",
+      "name": "Faiz Ari Fadhilah",
+      "email": "faiz.arifadhilah@gmail.com",
+      "phone": "+6281266029266",
+      "participants": 1,
+      "bookingCode": "BK-4D40E0616AC2",
+      "id": 5
+    }
+  ]
+}
