@@ -1,20 +1,41 @@
 function ScheduleSelection({
+  selectedRoomId,
   selectedDate,
   slots,
   selectedSlotId,
   slotsLoading,
   slotsError,
+  availabilityReady,
+  availabilityLoading,
+  availabilityError,
+  bookedSlotIds,
   minDate,
   onDateChange,
   onSelectSlot,
+  onRefreshAvailability,
   onBack,
   onNext
 }) {
+  const bookedIds = new Set(bookedSlotIds.map(Number));
+
+  const visibleSlots = slots.filter(
+    (slot) => Number(slot.roomId) === Number(selectedRoomId)
+  );
+
+  const selectedSlot = visibleSlots.find(
+    (slot) =>
+      selectedSlotId !== null &&
+      Number(slot.id) === Number(selectedSlotId)
+  );
+
   const canContinue =
     Boolean(selectedDate) &&
-    selectedSlotId !== null &&
+    selectedDate >= minDate &&
+    availabilityReady &&
     !slotsLoading &&
-    !slotsError;
+    !slotsError &&
+    Boolean(selectedSlot?.isAvailable) &&
+    !bookedIds.has(Number(selectedSlotId));
 
   return (
     <section>
@@ -35,10 +56,31 @@ function ScheduleSelection({
         />
       </div>
 
-      <h3>Available Time Slots</h3>
+      <div className="schedule-heading">
+        <h3>Available Time Slots</h3>
+
+        <button
+          type="button"
+          className="refresh-button"
+          disabled={
+            !selectedDate ||
+            availabilityLoading ||
+            slotsLoading
+          }
+          onClick={onRefreshAvailability}
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      {!selectedDate && (
+        <p className="availability-status">
+          Select a date to check availability.
+        </p>
+      )}
 
       {slotsLoading && (
-        <p>Loading slots...</p>
+        <p role="status">Loading time slots...</p>
       )}
 
       {slotsError && (
@@ -47,35 +89,65 @@ function ScheduleSelection({
         </p>
       )}
 
+      {selectedDate && availabilityLoading && (
+        <p role="status" className="availability-status">
+          Checking booking availability...
+        </p>
+      )}
+
+      {availabilityError && (
+        <p role="alert" className="error">
+          {availabilityError}
+        </p>
+      )}
+
       {!slotsLoading &&
         !slotsError &&
-        slots.length === 0 && (
+        visibleSlots.length === 0 && (
           <p>No time slots available.</p>
         )}
 
       <div className="slot-grid">
-        {slots.map((slot) => (
-          <button
-            key={slot.id}
-            type="button"
-            className={`slot-button ${
-              selectedSlotId === slot.id ? "selected" : ""
-            }`}
-            disabled={
-              !slot.isAvailable ||
-              !selectedDate ||
-              slotsLoading
-            }
-            aria-pressed={selectedSlotId === slot.id}
-            onClick={() => onSelectSlot(slot.id)}
-          >
-            {slot.time}
+        {visibleSlots.map((slot) => {
+          const isBooked =
+            availabilityReady &&
+            bookedIds.has(Number(slot.id));
 
-            {!slot.isAvailable && (
-              <span>Unavailable</span>
-            )}
-          </button>
-        ))}
+          const isUnavailable =
+            !slot.isAvailable || isBooked;
+
+          const slotLabel = !slot.isAvailable
+            ? "Unavailable"
+            : !selectedDate
+              ? "Select date"
+              : !availabilityReady
+                ? "Checking..."
+                : isBooked
+                  ? "Booked"
+                  : "Available";
+
+          return (
+            <button
+              key={slot.id}
+              type="button"
+              className={`slot-button ${
+                selectedSlotId === slot.id ? "selected" : ""
+              } ${isBooked ? "booked" : ""}`}
+              disabled={
+                isUnavailable ||
+                !selectedDate ||
+                selectedDate < minDate ||
+                !availabilityReady ||
+                slotsLoading
+              }
+              aria-pressed={selectedSlotId === slot.id}
+              onClick={() => onSelectSlot(slot.id)}
+            >
+              {slot.time}
+              <span>{slotLabel}</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="actions">

@@ -10,6 +10,7 @@ import {
   getRooms,
   getSlots,
   getBookingsBySlot,
+  getBookingsForRoomDate,
   createBooking
 } from "./services/api";
 import {
@@ -44,6 +45,15 @@ function App() {
   const [submitError, setSubmitError] = useState("");
   const [bookingResult, setBookingResult] = useState(null);
 
+  const [availability, setAvailability] = useState({
+    key: "",
+    status: "idle",
+    bookedSlotIds: [],
+    error: ""
+  });
+
+  const [availabilityRefresh, setAvailabilityRefresh] = useState(0);
+
   const selectedRoom = rooms.find(
     (room) => room.id === selectedRoomId
   );
@@ -56,6 +66,29 @@ function App() {
   const isFormValid =
     Boolean(selectedRoom) &&
     Object.keys(formErrors).length === 0;
+
+  const availabilityKey = `${selectedRoomId}:${selectedDate}`;
+
+  const availabilityReady =
+    availability.key === availabilityKey &&
+    availability.status === "success";
+
+  const availabilityLoading =
+    Boolean(selectedDate) &&
+    (
+      availability.key !== availabilityKey ||
+      availability.status === "loading"
+    );
+
+  const availabilityError =
+    availability.key === availabilityKey &&
+    availability.status === "error"
+      ? availability.error
+      : "";
+
+  const bookedSlotIds = availabilityReady
+    ? availability.bookedSlotIds
+    : [];
 
   // Fetch Rooms
   useEffect(() => {
@@ -124,6 +157,66 @@ function App() {
 
     return () => controller.abort();
   }, [step, selectedRoomId]);
+
+  useEffect(() => {
+    if (step !== 2 || selectedRoomId === null || !selectedDate) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const key = `${selectedRoomId}:${selectedDate}`;
+
+    async function loadAvailability() {
+      setAvailability({
+        key,
+        status: "loading",
+        bookedSlotIds: [],
+        error: ""
+      });
+
+      try {
+        const bookings = await getBookingsForRoomDate(
+          selectedRoomId,
+          selectedDate,
+          controller.signal
+        );
+
+        if (controller.signal.aborted) return;
+
+        const bookedIds = bookings.map(
+          (booking) => Number(booking.slotId)
+        );
+
+        setAvailability({
+          key,
+          status: "success",
+          bookedSlotIds: bookedIds,
+          error: ""
+        });
+
+        setSelectedSlotId((previousId) =>
+          previousId !== null &&
+          bookedIds.includes(Number(previousId))
+            ? null
+            : previousId
+        );
+
+      } catch {
+        if (controller.signal.aborted) return;
+
+        setAvailability({
+          key,
+          status: "error",
+          bookedSlotIds: [],
+          error: "Failed to check availability. Please try again."
+        });
+      }
+    }
+
+    loadAvailability();
+
+    return () => controller.abort();
+  }, [step, selectedRoomId, selectedDate, availabilityRefresh]);
 
   function handleFieldChange(event) {
     const { name, value } = event.target;
@@ -261,25 +354,60 @@ function App() {
     setTouched({});
     setSubmitError("");
     setBookingResult(null);
+
+    setAvailability({
+      key: "",
+      status: "idle",
+      bookedSlotIds: [],
+      error: ""
+    });
   }
 
   function handleSelectRoom(roomId) {
     if (roomId === selectedRoomId) return;
-  
+    
     setSelectedRoomId(roomId);
     setSelectedSlotId(null);
+
+    setAvailability({
+      key: "",
+      status: "idle",
+      bookedSlotIds: [],
+      error: ""
+    });
   }
 
   function handleDateChange(date) {
     setSelectedDate(date);
     setSelectedSlotId(null);
+
+    setAvailability({
+      key: "",
+      status: "idle",
+      bookedSlotIds: [],
+      error: ""
+    });
+  }
+
+  function handleRefreshAvailability() {
+    setAvailability({
+      key: "",
+      status: "idle",
+      bookedSlotIds: [],
+      error: ""
+    });
+
+    setAvailabilityRefresh((previous) => previous + 1);
   }
 
   return (
     <main className="container">
       <header className="header">
-        <h1>Meeting Room Booking</h1>
-        <p>Book the perfect space for your next meeting.</p>
+        <h1>Find Your Perfect Meeting Space.</h1>
+        <p>
+          Discover and book the right room for your next meeting,
+          all in one place.
+        </p>
       </header>
 
       <Stepper currentStep={step} />
@@ -296,14 +424,20 @@ function App() {
 
       ) : step === 2 ? (
         <ScheduleSelection
+          selectedRoomId={selectedRoomId}
           selectedDate={selectedDate}
           slots={slots}
           selectedSlotId={selectedSlotId}
           slotsLoading={slotsLoading}
           slotsError={slotsError}
+          availabilityReady={availabilityReady}
+          availabilityLoading={availabilityLoading}
+          availabilityError={availabilityError}
+          bookedSlotIds={bookedSlotIds}
           minDate={getTodayLocal()}
           onDateChange={handleDateChange}
           onSelectSlot={setSelectedSlotId}
+          onRefreshAvailability={handleRefreshAvailability}
           onBack={() => setStep(1)}
           onNext={() => setStep(3)}
         />

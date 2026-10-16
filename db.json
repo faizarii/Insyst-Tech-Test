@@ -98,57 +98,24 @@
     {
       "roomId": 2,
       "slotId": 5,
-      "date": "2027-11-14",
+      "date": "2026-11-17",
       "name": "Faiz Ari Fadhilah",
       "email": "faiz.arifadhilah@gmail.com",
-      "phone": "+6281266029266",
+      "phone": "081266029266",
       "participants": 7,
-      "bookingCode": "BK-4B5D915C3E06",
+      "bookingCode": "BK-DC26AE514836",
       "id": 1
     },
     {
-      "roomId": 2,
-      "slotId": 5,
-      "date": "2027-11-15",
-      "name": "fa",
-      "email": "faiz.fadhilah@binus.ac.id",
-      "phone": "+6281266029262",
-      "participants": 7,
-      "bookingCode": "BK-0830772D41E0",
+      "roomId": 1,
+      "slotId": 1,
+      "date": "2026-10-20",
+      "name": "Faiz Ari Fadhilah",
+      "email": "faiz.arifadhilah@gmail.com",
+      "phone": "081266029266",
+      "participants": 2,
+      "bookingCode": "BK-0F6255F7CA5D",
       "id": 2
-    },
-    {
-      "roomId": 2,
-      "slotId": 5,
-      "date": "2026-11-14",
-      "name": "Faiz Ari Fadhilah",
-      "email": "faiz.fadhilah@binus.ac.id",
-      "phone": "+6281266029262",
-      "participants": 1,
-      "bookingCode": "BK-DCD3EC20113E",
-      "id": 3
-    },
-    {
-      "roomId": 3,
-      "slotId": 9,
-      "date": "2026-10-19",
-      "name": "Faiz Ari Fadhilah",
-      "email": "faiz.arifadhilah@gmail.com",
-      "phone": "+6281266029266",
-      "participants": 11,
-      "bookingCode": "BK-E65CF5DF0B44",
-      "id": 4
-    },
-    {
-      "roomId": 2,
-      "slotId": 5,
-      "date": "2026-11-20",
-      "name": "Faiz Ari Fadhilah",
-      "email": "faiz.arifadhilah@gmail.com",
-      "phone": "+6281266029266",
-      "participants": 1,
-      "bookingCode": "BK-4D40E0616AC2",
-      "id": 5
     }
   ]
 }

@@ -56,3 +56,21 @@ export async function createBooking(bookingData) {
 
   return response.json();
 }
+
+export async function getBookingsForRoomDate(roomId, date, signal) {
+  const params = new URLSearchParams({
+    roomId: String(roomId),
+    date
+  });
+
+  const response = await fetch(
+    `${BASE_URL}/bookings?${params.toString()}`,
+    { signal }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch booking availability");
+  }
+
+  return response.json();
+}
